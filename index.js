@@ -7,7 +7,7 @@ function connect() {
     console.log(`Checking server... Attempt ${tries}`);
 
     const bot = mineflayer.createBot({
-        host: 'esssmp.tkmc.net',
+        host: 'node-sg-free-01.tickhosting.com',
         port: 50979,
         username: 'WakeBot',
         version: '1.21.11'
