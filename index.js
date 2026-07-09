@@ -1,7 +1,7 @@
 const mineflayer = require('mineflayer');
 
 const bot = mineflayer.createBot({
-    host: 'node-sg-free-01.tickhosting.com:50979',
+    host: 'esssmp.tkmc.net',
     port: 25565,
     username: 'WakeBot'
 });
