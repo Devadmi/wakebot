@@ -1,0 +1,10 @@
+{
+  "name": "wakebot",
+  "version": "1.0.0",
+  "dependencies": {
+    "mineflayer": "^4.20.1"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
