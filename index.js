@@ -13,25 +13,14 @@ function connect() {
         version: '1.21.11'
     });
 
-    let serverStarting = false;
-
     bot.on('message', (message) => {
         const text = message.toString();
 
         console.log("Server message:", text);
 
-        // Tick.Hosting queue/start message
         if (
-            text.includes("queue") ||
-            text.includes("loading") ||
-            text.includes("The server will start soon")
+            text.includes("If you wish to use IP forwarding")
         ) {
-            serverStarting = true;
-            console.log("Server is starting. Waiting...");
-        }
-
-        // Server is fully online (proxy forwarding error = success)
-        if (text.includes("If you wish to use IP forwarding")) {
             console.log("Server is online!");
 
             bot.quit();
@@ -45,7 +34,6 @@ function connect() {
     bot.on('spawn', () => {
         console.log("Joined Minecraft server!");
 
-        // If it somehow joins normally
         setTimeout(() => {
             console.log("Wake complete.");
             bot.quit();
@@ -56,27 +44,35 @@ function connect() {
     bot.on('kicked', (reason) => {
         console.log("Kicked:", reason);
 
-        retry(serverStarting);
+        const text = JSON.stringify(reason);
+
+        if (
+            text.includes("queue") ||
+            text.includes("server will start soon") ||
+            text.includes("Please wait and try reconnecting")
+        ) {
+            console.log("Tick server is starting. Waiting 60 seconds...");
+
+            setTimeout(() => {
+                connect();
+            }, 60000);
+
+        } else {
+            console.log("Normal kick. Retrying in 10 seconds...");
+
+            setTimeout(() => {
+                connect();
+            }, 10000);
+        }
     });
 
     bot.on('error', (err) => {
         console.log("Error:", err.message);
 
-        retry(serverStarting);
-    });
-
-    function retry(starting) {
-        bot.removeAllListeners();
-
-        // Don't spam Tick.Hosting while it is starting
-        const delay = starting ? 60000 : 10000;
-
-        console.log(`Retrying in ${delay / 1000} seconds...`);
-
         setTimeout(() => {
             connect();
-        }, delay);
-    }
+        }, 10000);
+    });
 }
 
 connect();
