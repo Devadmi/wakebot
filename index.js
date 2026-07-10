@@ -13,32 +13,12 @@ function connect() {
         version: '1.21.11'
     });
 
-    bot.on('message', (message) => {
-        const text = message.toString();
-
-        console.log("Server message:", text);
-
-        if (
-            text.includes("If you wish to use IP forwarding")
-        ) {
-            console.log("Server is online!");
-
-            bot.quit();
-
-            setTimeout(() => {
-                process.exit(0);
-            }, 2000);
-        }
+    bot.on('spawn', () => {
+        console.log("Joined the server!");
     });
 
-    bot.on('spawn', () => {
-        console.log("Joined Minecraft server!");
-
-        setTimeout(() => {
-            console.log("Wake complete.");
-            bot.quit();
-            process.exit(0);
-        }, 30000);
+    bot.on('message', (message) => {
+        console.log("Message:", message.toString());
     });
 
     bot.on('kicked', (reason) => {
@@ -46,24 +26,36 @@ function connect() {
 
         const text = JSON.stringify(reason);
 
+        // SUCCESS! The backend server is now online.
+        if (text.includes("If you wish to use IP forwarding")) {
+            console.log("Backend server is online! Wake complete.");
+            process.exit(0);
+            return;
+        }
+
+        // Tick.Hosting queue / starting messages
         if (
+            text.includes("Server is starting") ||
+            text.includes("100%") ||
             text.includes("queue") ||
-            text.includes("server will start soon") ||
+            text.includes("The server will start soon") ||
             text.includes("Please wait and try reconnecting")
         ) {
-            console.log("Tick server is starting. Waiting 60 seconds...");
+            console.log("Server is still starting. Waiting 60 seconds before trying again...");
 
             setTimeout(() => {
                 connect();
             }, 60000);
 
-        } else {
-            console.log("Normal kick. Retrying in 10 seconds...");
-
-            setTimeout(() => {
-                connect();
-            }, 10000);
+            return;
         }
+
+        // Unknown kick
+        console.log("Unknown kick. Retrying in 10 seconds...");
+
+        setTimeout(() => {
+            connect();
+        }, 10000);
     });
 
     bot.on('error', (err) => {
@@ -72,6 +64,10 @@ function connect() {
         setTimeout(() => {
             connect();
         }, 10000);
+    });
+
+    bot.on('end', () => {
+        console.log("Disconnected.");
     });
 }
 
