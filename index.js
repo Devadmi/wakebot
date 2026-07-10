@@ -1,73 +1,98 @@
 const mineflayer = require('mineflayer');
 
-let tries = 0;
+const HOST = 'node-sg-free-01.tickhosting.com';
+const PORT = 50979;
+const VERSION = process.env.MC_VERSION || '1.21.11';
+const USERNAME = 'WakeBot';
+
+let attempts = 0;
 
 function connect() {
-    tries++;
-    console.log(`Checking server... Attempt ${tries}`);
+    attempts++;
+    console.log(`\n=== Attempt ${attempts} ===`);
+    console.log(`Connecting with Minecraft ${VERSION}...`);
 
     const bot = mineflayer.createBot({
-        host: 'node-sg-free-01.tickhosting.com',
-        port: 50979,
-        username: 'WakeBot',
-        version: '1.21.11'
+        host: HOST,
+        port: PORT,
+        username: USERNAME,
+        version: VERSION
     });
+
+    let handled = false;
 
     bot.on('spawn', () => {
-        console.log("Joined the server!");
-    });
+        console.log("Connected!");
 
-    bot.on('message', (message) => {
-        console.log("Message:", message.toString());
+        setTimeout(() => {
+            console.log("Wake complete.");
+            bot.quit();
+            process.exit(0);
+        }, 30000);
     });
 
     bot.on('kicked', (reason) => {
-        console.log("Kicked:", reason);
+        if (handled) return;
+        handled = true;
 
         const text = JSON.stringify(reason);
+        console.log("Kicked:", text);
 
-        // SUCCESS! The backend server is now online.
         if (text.includes("If you wish to use IP forwarding")) {
-            console.log("Backend server is online! Wake complete.");
+            console.log("Backend server is online!");
             process.exit(0);
             return;
         }
 
-        // Tick.Hosting queue / starting messages
         if (
-            text.includes("Server is starting") ||
             text.includes("100%") ||
-            text.includes("queue") ||
-            text.includes("The server will start soon") ||
-            text.includes("Please wait and try reconnecting")
+            text.includes("Server is starting, please wait")
         ) {
-            console.log("Server is still starting. Waiting 60 seconds before trying again...");
-
-            setTimeout(() => {
-                connect();
-            }, 60000);
-
+            console.log("Server is starting (100%). Waiting 15 seconds...");
+            setTimeout(connect, 15000);
             return;
         }
 
-        // Unknown kick
-        console.log("Unknown kick. Retrying in 10 seconds...");
+        const match = text.match(/Estimated wait:.*?~(\d+)\s+minute/);
 
-        setTimeout(() => {
-            connect();
-        }, 10000);
+        if (match) {
+            const minutes = parseInt(match[1]);
+
+            let wait;
+
+            if (minutes <= 1) {
+                wait = 30;
+            } else {
+                wait = (minutes - 1) * 60;
+            }
+
+            console.log(`Queue says ~${minutes} minute(s).`);
+            console.log(`Waiting ${wait} seconds...`);
+
+            setTimeout(connect, wait * 1000);
+            return;
+        }
+
+        if (
+            text.includes("The server will start soon") ||
+            text.includes("Please wait and try reconnecting")
+        ) {
+            console.log("Server is starting. Waiting 60 seconds...");
+            setTimeout(connect, 60000);
+            return;
+        }
+
+        console.log("Unknown kick. Retrying in 10 seconds...");
+        setTimeout(connect, 10000);
     });
 
     bot.on('error', (err) => {
         console.log("Error:", err.message);
 
-        setTimeout(() => {
-            connect();
-        }, 10000);
-    });
-
-    bot.on('end', () => {
-        console.log("Disconnected.");
+        if (!handled) {
+            handled = true;
+            setTimeout(connect, 10000);
+        }
     });
 }
 
